@@ -1,0 +1,49 @@
+version: '3.7'
+
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    hostname: gitlab
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        gitlab_rails['gitlab_shell_ssh_port'] = 8822
+    ports:
+      - "443:443"
+      - "8880:80"
+      - "8822:22"
+    volumes:
+      - ./config/gitlab:/etc/gitlab
+      - ./data/gitlab:/var/opt/gitlab
+      - ./logs:/var/log/gitlab
+    networks:
+      - gitlab
+    restart: always
+  gitlab-runner:
+    image: gitlab/gitlab-runner:alpine
+    restart: unless-stopped
+    depends_on:
+      - gitlab
+    volumes:
+      - ./config/gitlab-runner:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - gitlab
+  mattermost:
+    image: mattermost/mattermost-preview:latest
+    ports:
+      - '8065:8065'
+    networks:
+      - gitlab
+  ansible:
+    container_name: ansible
+    build:
+      context: ./docker/ansible
+      dockerfile: Dockerfile
+  php:
+    container_name: php
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+      
+networks:
+  gitlab:
